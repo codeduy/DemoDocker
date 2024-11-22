@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0.28
+    # restart: always
+    ports: 
+      - "3307:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: Mck050604@  
+      MYSQL_DATABASE: midterm_nodejs   
+      MYSQL_USER: root                 
+      MYSQL_PASSWORD: Mck050604@      
+    volumes:
+      - D:/Docker/volume/mysql_28:/var/lib/mysql  
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    networks:
+      - app-network
+    
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    # restart: always
+    ports:
+      - "9000:80"
+    environment:
+      PMA_HOST: mysql                   
+      MYSQL_ROOT_PASSWORD: Mck050604@   
+      MYSQL_USER: root                  
+      MYSQL_PASSWORD: Mck050604@
+    networks:
+      - app-network  
+  
+
+  server:
+    # build:
+    #   context: ./Server                  
+    #   dockerfile: Dockerfile            
+    #   target: server                     
+    image: myapp_server
+    # restart: always
+    ports:
+      - "3000:3000"                
+    # depends_on:
+    #   - mysql
+    #   - rabbitmq                    
+    environment:
+      DB_HOST: mysql                     
+      DB_USER: root                     
+      DB_PASSWORD: Mck050604@            
+      DB_NAME: midterm_nodejs 
+    networks:
+      - app-network  
+    deploy:
+      replicas: 3
+      update_config: 
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+        
+
+  client:
+    # build:
+    #   context: ./Client                         
+    #   dockerfile: Dockerfile             
+    #   target: build                     
+    image: myapp_client
+    # restart: always
+    # depends_on:
+    #   - server                          
+    ports:
+      - "3001:3001"   
+    networks:
+      - app-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"   
+      - "15672:15672" 
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s     
+      retries: 5
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  redis:
+    image: redis:latest
+    ports:
+      - '6379:6379'
+    networks:
+      - app-network
+      
+
+
+networks:
+  app-network:
+    driver: overlay
+
+
+
+# docker swarm init
+# docker stack deploy -c docker-compose.yml my_app
+# Navigate to the Server directory
+# cd Server
+# docker build -t myapp_server .
+
+# docker stack rm my_app
+# docker network prune
+
+# # Navigate to the Client directory
+# cd ../Client
+# docker build -t myapp_client .
